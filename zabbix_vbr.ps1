@@ -202,20 +202,22 @@ function GetJobsResults {
         $out = @()
         $Jobs = $Jobs | Where-Object JobType -eq $JobType
 
-        if (-Not $PerVm) {
-            $out += $Jobs.FindLastSession()
-        }
-        else {
-            $Tasks = $Jobs.FindLastSession() | Get-VBRTaskSession
-            $Jobs | ForEach-Object {
-                $JobId = $_.Id
-                $_ | GetAllVmInJob | ForEach-Object {
-                    $VmName = $_.Name
-                    $Status = ($Tasks | Where-Object { $_.Name -eq $VmName -and $_.JobSess.JobId -eq $JobId } | Select-Object Status).Status
-                    if (-Not "$Status") {   # Inserted quotes    
-                        $Status = 1
+        if ($Jobs) {
+            if (-Not $PerVm) {
+                $out += $Jobs.FindLastSession()
+            }
+            else {
+                $Tasks = $Jobs.FindLastSession() | Get-VBRTaskSession
+                $Jobs | ForEach-Object {
+                    $JobId = $_.Id
+                    $_ | GetAllVmInJob | ForEach-Object {
+                        $VmName = $_.Name
+                        $Status = ($Tasks | Where-Object { $_.Name -eq $VmName -and $_.JobSess.JobId -eq $JobId } | Select-Object Status).Status
+                        if (-Not "$Status") {   # Inserted quotes    
+                            $Status = 1
+                        }
+                        $out += @{ "JOBID" = "$($JobId)_$($_.Id)"; "RESULT" = $Status}
                     }
-                    $out += @{ "JOBID" = "$($JobId)_$($_.Id)"; "RESULT" = $Status}
                 }
             }
         }
@@ -229,9 +231,15 @@ function GetJobsResults {
 $ITEM = [string]$args[0]
 try {
     $ALL_JOB_INFO = [Veeam.Backup.Core.CBackupJob]::GetAll() | Where-Object IsScheduleEnabled
+   
+#  $ALL_JOB_INFO | ForEach-Object {
+#    Write-Output $_.Id
+#    Write-Output $_.Name
+#    Write-Output $_.JobType
+#  }    
 }
 catch {
-    "$(Get-Date): $($_.Exception.Message)" | Out-File -FilePath "C:\zabbix_vbr_log.txt"
+    "$(Get-Date): $($_.Exception.Message)" | Out-File -FilePath "C:\data\Veeam\zabbix_vbr_log.txt"
 }
 
 #$ITEM = "ResultBackup"
