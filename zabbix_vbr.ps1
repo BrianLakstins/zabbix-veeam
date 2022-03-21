@@ -1,5 +1,5 @@
 # Script: zabbix_vbr
-# Author: Starikov Anton
+# Author: Starikov Anton; Fixed by: Ageev Alexander
 # Email: starikov_aa@mail.ru
 # GitHub: https://github.com/starikov-aa/zabbix-veeam
 # Description: Query Veeam job information
@@ -38,7 +38,7 @@
 
 # Load Veeam Module
 Add-PSSnapin -Name VeeamPSSnapIn -ErrorAction SilentlyContinue
-
+Disconnect-VBRServer
 Connect-VBRServer
 
 function DiscoveryToZabbix {
@@ -113,17 +113,18 @@ function ResultJobToZabbix {
 
     process {
         
-        if (-Not $item.[string]$KeyFieldName) {
+        if (-Not $item.[string]$KeyFieldName) {  
             return
         }
 
         if (-Not $out.ContainsKey([string]$item.$KeyFieldName)) {
             $out += @{[string]$item.$KeyFieldName = @{ } }
+           # $a= $item.[string]$PropertiesFieldName[0]
         }
 
         for ($i = 0; $i -le $PropertiesFieldName.Count - 1; $i++) {
             if ($item) {
-                if ($item.[string]$PropertiesFieldName[$i]) {
+                if ("$item.[string]$PropertiesFieldName[$i]") {           # Inserted quotes
                     $prop_val = [string]$item.[string]$PropertiesFieldName[$i]
                     if (@('result', 'lastresult', 'laststate', 'status') -match $PropertiesFieldName[$i]) {
                         $prop_val = $prop_val | VeeamStatusReplace
@@ -211,7 +212,7 @@ function GetJobsResults {
                 $_ | GetAllVmInJob | ForEach-Object {
                     $VmName = $_.Name
                     $Status = ($Tasks | Where-Object { $_.Name -eq $VmName -and $_.JobSess.JobId -eq $JobId } | Select-Object Status).Status
-                    if (-Not $Status) {
+                    if (-Not "$Status") {   # Inserted quotes    
                         $Status = 1
                     }
                     $out += @{ "JOBID" = "$($JobId)_$($_.Id)"; "RESULT" = $Status}
@@ -339,3 +340,5 @@ switch ($ITEM) {
 }
 
 Disconnect-VBRServer
+
+
